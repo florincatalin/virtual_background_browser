@@ -50,4 +50,7 @@ No attribution required
 
 Author Yeskay1211
 
+See a demo:
+
+![](https://github.com/florincatalin/virtual_background_browser/blob/main/virtual_background_demo_short.gif)
 
