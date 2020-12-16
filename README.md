@@ -34,11 +34,14 @@ http://blog.daionet.gr.jp/knok-e/2020/05/10/virtual-background-using-webcam/
 
 Apache-2.0 License
 
+WebRTC:
+
 https://webrtc.github.io/samples/
 
 https://github.com/webrtc/samples
 
 BSD-style license
+
 
 Background image is from Pixabay 
 
@@ -53,4 +56,12 @@ Author Yeskay1211
 See a demo:
 
 ![](https://github.com/florincatalin/virtual_background_browser/blob/main/virtual_background_demo_short.gif)
+
+
+
+Tested with Firefox 82.0.
+
+Useful information I found on MDN web docs:
+
+https://developer.mozilla.org/en-US/docs/Web/API/MediaStream_Recording_API
 
