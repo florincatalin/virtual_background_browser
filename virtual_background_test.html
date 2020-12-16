@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<!--
+*  Copyright (c) 2020 Florin-Cătălin Tofan, All Rights Reserved.
+*
+* This project is inspired by:
+* https://github.com/bensonruan/Selfie-Anywhere
+* https://bensonruan.com/selfie-anywhere-person-segmentation-with-bodypix/
+*
+* This project includes codes from the following repositories:
+*
+* https://www.tensorflow.org/js/
+* https://github.com/tensorflow/tfjs
+* https://github.com/tensorflow/tfjs-models
+* Apache-2.0 License 
+*
+* NOKUBI Takatsugu
+* https://github.com/knok/virtbg
+* http://blog.daionet.gr.jp/knok-e/2020/05/10/virtual-background-using-webcam/
+* Apache-2.0 License
+*
+* https://webrtc.github.io/samples/
+* https://github.com/webrtc/samples
+* BSD-style license
+*
+* Background image is from Pixabay 
+* https://pixabay.com/users/yeskay1211-6332528/
+* License Free for commercial use
+* No attribution required
+* Author Yeskay1211
+*
+-->
+<html lang="en">
+<head>
+
+    <meta charset="utf-8">
+    <meta name="description" content="Virtual Background, Segmentation, Tensorflow, BodyPix, WebRTC, mediaRecorder, webm">
+    <meta name="viewport" content="width=device-width, user-scalable=yes, initial-scale=1, maximum-scale=1">
+    <base target="_blank">
+    
+    <!-- Load TensorFlow.js -->
+    <script src="js/tensorflow_tfjs@1.2.js"></script>
+    <!-- Load BodyPix -->
+    <script src="js/body-pix@2.0.js"></script>
+	
+    <style>
+        h1 {
+            text-align: center;
+            padding: 2rem;
+        }
+
+        #video,
+        #canvas {
+            border: 5px outset #000080;
+            align: center;
+			width: 640px;
+			height: 480px;
+        }
+
+#video_out {
+            border: 5px outset red;
+            align: center;
+			width: 640px;
+			height: 480px;
+			margin-top: 10px;
+}
+
+        .parent {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+	
+		hr {
+		width: 650px;
+		color: #000080;
+		}
+		
+	.flex-container {
+	display:-webkit-flex;
+	display:flex;
+	-webkit-flex-direction:column;
+	flex-direction:column;
+	-webkit-justify-content:center;
+	justify-content:center;
+	-webkit-align-items:center;
+	align-items:center;
+	-webkit-align-content:space-around;
+	align-content:space-around;
+}
+		#start, #stop, #record {
+		font-size: 20px;
+		margin: 5px;
+		padding: 5px;
+		border-width: 3px;
+		border-style: outset;
+		border-color: #000080;
+		border-radius: 10px;
+		}
+
+    </style>
+
+</head>
+
+<body>
+
+<div id ="container" class="flex-container">
+
+     <video id="camera" width="640" height="480" style="display: none"></video>
+	  
+		 
+    <div class="flex-item">
+        <button id="start" onclick="startVideoAnimation();">Start Video</button>
+        <button id="stop" onclick="stopVideo()">Stop Video</button>
+		<button id="record" onclick="inregistrare();">Start Recording</button>
+    </div>
+	
+	<hr>
+	
+    <canvas id="canvas" class="flex-item"></canvas>
+	     <img  id="bg" src="bg/pixabay_hills.jpg" width="640" height="480" style="display: none">
+		 	     <video id="video_out" class="flex-item" width="640" height="480"></video>
+		 
+	</div>
+
+     <script>
+        let localStream = null;
+        let localVideo = document.getElementById('camera');
+        let net = null;
+        let continueAnimation = false;
+        let animationId = null;
+
+        async function loadModel() {
+            net = await bodyPix.load({
+                architecture: 'MobileNetV1',
+                outputStride: 16,
+                multiplier: 0.50,
+                quantBytes: 2,
+            });
+        }
+
+        async function getImages() {
+            const img = await document.getElementById('camera');
+            const bg = document.getElementById('bg')
+            const cv_img = document.createElement('canvas');
+            const cv_bg = document.createElement('canvas');
+            cv_img.width = img.width;
+            cv_img.height = img.height;
+            const ctx_img = cv_img.getContext('2d');
+            ctx_img.drawImage(img, 0, 0);
+            cv_bg.width = img.width;
+            cv_bg.height = img.height;
+            const ctx_bg = cv_bg.getContext('2d');
+            ctx_bg.drawImage(bg, 0, 0, bg.width, bg.height, 0, 0, img.width, img.height);
+            const data_img = ctx_img.getImageData(0, 0, img.width, img.height);
+            const data_bg = ctx_bg.getImageData(0, 0, img.width, img.height);
+            return [img, bg, cv_img, cv_bg, ctx_img, ctx_bg, data_img, data_bg];
+        }
+
+        function drawToCanvas(canvas, segmentation, img, data_img, data_bg) {
+            const ctx = canvas.getContext("2d");
+            canvas.width = img.width;
+            canvas.height = img.height;
+            let width = img.width;
+            let height = img.height;
+            let imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            let pixels = imageData.data;
+            for (let y = 0; y < height; y++) {
+                for (let x = 0; x < width; x++) {
+                    let base = (y * width + x) * 4;
+                    let segbase = y * width + x;
+                    if (segmentation.data[segbase] == 1) { // is fg
+                        pixels[base + 0] = data_img.data[base + 0];
+                        pixels[base + 1] = data_img.data[base + 1];
+                        pixels[base + 2] = data_img.data[base + 2];
+                        pixels[base + 3] = data_img.data[base + 3];
+                    } else {
+                        pixels[base + 0] = data_bg.data[base + 0];
+                        pixels[base + 1] = data_bg.data[base + 1];
+                        pixels[base + 2] = data_bg.data[base + 2];
+                        pixels[base + 3] = data_bg.data[base + 3];
+                    }
+                }
+            }
+            ctx.putImageData(imageData, 0, 0);
+        }
+        async function startVideoAnimation() {
+            await startVideo();
+            continueAnimation = true;
+            animationId = window.requestAnimationFrame(updateCanvas);
+        }
+        async function startPredict() {
+            await startVideo();
+            let [img, bg, cv_img, cv_bg, ctx_img, ctx_bg, data_img, data_bg] = await getImages();
+
+            const segmentation = await net.segmentPerson(img);
+            
+            const canvas = document.getElementById('canvas');
+            const ctx = canvas.getContext("2d");
+            drawToCanvas(canvas, segmentation, img, data_img, data_bg);
+        };
+        loadModel();
+
+        async function updateCanvas() {
+            let [img, bg, cv_img, cv_bg, ctx_img, ctx_bg, data_img, data_bg] = await getImages();
+            const segmentation = await net.segmentPerson(img);
+            const canvas = document.getElementById('canvas');
+            const ctx = canvas.getContext("2d");
+            drawToCanvas(canvas, segmentation, img, data_img, data_bg);
+            if (continueAnimation) {
+                animationId = window.requestAnimationFrame(updateCanvas);
+            }	
+        }
+
+        function stopVideo() {
+            continueAnimation = false;
+            localVideo.pause();
+            localVideo.srcObject = null;
+            if (localStream) {
+                localStream.getTracks().forEach(track => {
+                    console.log('stop track:', track);
+                    track.stop();
+                });
+                localStream = null;
+            }
+        }
+
+        async function startVideo() {
+            const mediaConst = { video: { width: 640, height: 480}, audio: false };
+            localStream = await navigator.mediaDevices.getUserMedia(mediaConst).catch(err => {
+                console.error('media error:', err);
+                return;
+            });
+            localVideo.srcObject = localStream;
+            await localVideo.play().catch(err => console.error('local play error:', err))
+        }
+		
+
+
+		async function inregistrare () {
+				const canvasElt = document.getElementById('canvas');
+				const vout =document.getElementById('video_out');
+				const outstream = await canvasElt.captureStream(25);
+			if (document.getElementById('record').innerHTML === "Start Recording") {
+				vout.srcObject = outstream;
+				vout.play();
+				startRecording();
+				document.getElementById('record').innerHTML = "Stop Recording";
+			} else {
+				stopRecording();
+				download();
+				document.getElementById('record').innerHTML = "Start Recording";		
+		}
+		}
+		
+		
+		function startRecording() {
+		canvasElt = document.getElementById('canvas');
+		outstream = canvasElt.captureStream(25);
+		let options = {
+				mimeType: 'video/webm;codecs=vp8'
+								};
+		mediaRecorder = new MediaRecorder(outstream, options);
+		recordedBlobs = [];
+		mediaRecorder.start();
+			try {
+					mediaRecorder = new MediaRecorder(outstream, options);
+					} catch (e0) {
+						console.log('Unable to create MediaRecorder with options Object: ', e0);
+			try {
+					options = {mimeType: 'video/webm,codecs=vp9'};
+					mediaRecorder = new MediaRecorder(outstream, options);
+					} catch (e1) {
+						console.log('Unable to create MediaRecorder with options Object: ', e1);
+			try {
+					options = 'video/vp8'; // Chrome 47
+					mediaRecorder = new MediaRecorder(outstream, options);
+					} catch (e2) {
+						alert('MediaRecorder is not supported by this browser.\n\n' +
+								'Try Firefox 29 or later, or Chrome 47 or later, ' +
+								'with Enable experimental Web Platform features enabled from chrome://flags.');
+						console.error('Exception while creating MediaRecorder:', e2);
+						return;
+      }
+    }
+  }
+}
+  
+ 
+	function stopRecording() {
+	mediaRecorder.stop();
+	console.log('Recorded Blobs: ', recordedBlobs);
+}
+
+
+	function download() {
+	const blob = new Blob(recordedBlobs, {type: 'video/webm;codecs=vp8'});
+	const url = window.URL.createObjectURL(blob);
+	const a = document.createElement('a');
+	a.style.display = 'none';
+	a.href = url;
+	a.download = 'test.webm';
+	document.body.appendChild(a);
+	a.click();
+	setTimeout(() => {
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+	}, 100);
+}
+  
+</script>
+    
+</body>
+</html>
