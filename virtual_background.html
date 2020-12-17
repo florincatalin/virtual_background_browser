@@ -37,10 +37,10 @@
     <meta name="viewport" content="width=device-width, user-scalable=yes, initial-scale=1, maximum-scale=1">
     <base target="_blank">
     
-  <!-- Load TensorFlow.js -->
-  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@1.2"></script>
-  <!-- Load BodyPix -->
-  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/body-pix@2.0"></script>
+    <!-- Load TensorFlow.js -->
+    <script src="js/tensorflow_tfjs@1.2.js"></script>
+    <!-- Load BodyPix -->
+    <script src="js/body-pix@2.0.js"></script>
 	
     <style>
         h1 {
@@ -55,6 +55,14 @@
 			width: 640px;
 			height: 480px;
         }
+
+#video_out {
+            border: 5px outset red;
+            align: center;
+			width: 640px;
+			height: 480px;
+			margin-top: 10px;
+}
 
         .parent {
             display: flex;
@@ -80,7 +88,7 @@
 	-webkit-align-content:space-around;
 	align-content:space-around;
 }
-		#start, #stop, #record {
+		#bcomutare, #brecord {
 		font-size: 20px;
 		margin: 5px;
 		padding: 5px;
@@ -100,12 +108,10 @@
 
      <video id="camera" width="640" height="480" style="display: none"></video>
 	  
-	     <video id="video_out" width="640" height="480" style="display: none"></video>
 		 
     <div class="flex-item">
-        <button id="start" onclick="startVideoAnimation();">Start Video</button>
-        <button id="stop" onclick="stopVideo()">Stop Video</button>
-		<button id="record" onclick="inregistrare();">Start Recording</button>
+        <button id="bcomutare" onclick="comutare();">Start Video</button>
+		<button id="brecord" onclick="inregistrare();" disabled>Start Recording</button>
     </div>
 	
 	<hr>
@@ -115,7 +121,8 @@
 		 
 	</div>
 
-     <script>
+     <script> 	 
+	 
         let localStream = null;
         let localVideo = document.getElementById('camera');
         let net = null;
@@ -218,7 +225,7 @@
         }
 
         async function startVideo() {
-            const mediaConst = { video: { width: 640, height: 480}, audio: true };
+            const mediaConst = { video: { width: 640, height: 480}, audio: false };
             localStream = await navigator.mediaDevices.getUserMedia(mediaConst).catch(err => {
                 console.error('media error:', err);
                 return;
@@ -228,74 +235,67 @@
         }
 		
 
+  var chunks; // here we will store our recorded media chunks (Blobs)
+  var stream; // grab our canvas MediaStream
+  var rec; // init the recorder
 
-		async function inregistrare () {
-				const canvasElt = document.getElementById('canvas');
-			//	const vout =document.getElementById('video_out');
-				const outstream = await canvasElt.captureStream(5);
-			if (document.getElementById('record').innerHTML === "Start Recording") {
-			//	vout.srcObject = outstream;
-			//	vout.play();
-				startRecording();
-				document.getElementById('record').innerHTML = "Stop Recording";
-			} else {
-				stopRecording();
-				download();
-				document.getElementById('record').innerHTML = "Start Recording";		
-		}
-		}
-		
-		
-		function startRecording() {
-		canvasElt = document.getElementById('canvas');
-		outstream = canvasElt.captureStream(5);
-		let options = {mimeType: 'video/webm'};
-		recordedBlobs = [];
-			try {
-					mediaRecorder = new MediaRecorder(outstream, options);
-					} catch (e0) {
-						console.log('Unable to create MediaRecorder with options Object: ', e0);
-			try {
-					options = {mimeType: 'video/webm,codecs=vp9'};
-					mediaRecorder = new MediaRecorder(outstream, options);
-					} catch (e1) {
-						console.log('Unable to create MediaRecorder with options Object: ', e1);
-			try {
-					options = 'video/vp8'; // Chrome 47
-					mediaRecorder = new MediaRecorder(outstream, options);
-					} catch (e2) {
-						alert('MediaRecorder is not supported by this browser.\n\n' +
-								'Try Firefox 29 or later, or Chrome 47 or later, ' +
-								'with Enable experimental Web Platform features enabled from chrome://flags.');
-						console.error('Exception while creating MediaRecorder:', e2);
-						return;
-      }
-    }
-  }
-}
-  
-  
-	function stopRecording() {
-	mediaRecorder.stop();
-	console.log('Recorded Blobs: ', recordedBlobs);
+function startRecording() {
+  chunks = []; // here we will store our recorded media chunks (Blobs)
+  stream = canvas.captureStream(); // grab our canvas MediaStream
+  rec = new MediaRecorder(stream); // init the recorder
+  // every time the recorder has new data, we will store it in our array
+  rec.ondataavailable = e => chunks.push(e.data);
+  rec.start();
+//  setTimeout(()=>rec.stop(), 3000); // stop recording in 3s
 }
 
+function stopRecording() {
+  // only when the recorder stops, we construct a complete Blob from all the chunks
+  rec.onstop = e => exportVid(new Blob(chunks, {type: 'video/webm'}));
+  rec.stop();
+}
 
-	function download() {
-	const blob = new Blob(recordedBlobs, {type: 'video/webm'});
-	const url = window.URL.createObjectURL(blob);
-	const a = document.createElement('a');
-	a.style.display = 'none';
-	a.href = url;
-	a.download = 'test.webm';
-	document.body.appendChild(a);
-	a.click();
+function exportVid(blob) {
+ const vid = document.createElement('video');
+ vid.style.display = "none";
+ vid.src = URL.createObjectURL(blob);
+  //vid.controls = true;
+  document.body.appendChild(vid);
+  const a = document.createElement('a');
+  a.download = 'myvid.webm';
+  a.href = vid.src;
+//  a.textContent = 'download the video';
+  document.body.appendChild(a);
+  	a.click();
 	setTimeout(() => {
     document.body.removeChild(a);
-    window.URL.revokeObjectURL(url);
-	}, 100);
+   window.URL.revokeObjectURL(blob);
+	}, 500);
 }
-  
+
+ function inregistrare () {	 
+			if (document.getElementById('brecord').innerHTML === "Start Recording") {
+				document.getElementById('brecord').innerHTML = "Stop Recording";
+				startRecording();
+				document.getElementById('bcomutare').disabled = true;
+				} else {
+			stopRecording();
+			document.getElementById('brecord').innerHTML = "Start Recording";
+			document.getElementById('bcomutare').disabled = false;
+		}
+		};
+		
+		function comutare() {
+				if (document.getElementById('bcomutare').innerHTML === "Start Video") {
+				document.getElementById('bcomutare').innerHTML = "Stop Video";
+				startVideoAnimation();
+				document.getElementById('brecord').disabled = false;
+				} else {
+			stopVideo();
+			document.getElementById('bcomutare').innerHTML = "Start Video";
+			document.getElementById('brecord').disabled = true;
+		}	
+		}
 </script>
     
 </body>
