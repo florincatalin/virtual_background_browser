@@ -36,11 +36,13 @@
     <meta name="description" content="Virtual Background, Segmentation, Tensorflow, BodyPix, WebRTC, mediaRecorder, webm">
     <meta name="viewport" content="width=device-width, user-scalable=yes, initial-scale=1, maximum-scale=1">
     <base target="_blank">
+	
+		<link href="css/dropdown_hdiv.css" rel="stylesheet" type="text/css">
     
-  <!-- Load TensorFlow.js -->
-  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@1.2"></script>
-  <!-- Load BodyPix -->
-  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/body-pix@2.0"></script>
+    <!-- Load TensorFlow.js -->
+    <script src="js/tensorflow_tfjs@1.2.js"></script>
+    <!-- Load BodyPix -->
+    <script src="js/body-pix@2.0.js"></script>
 	
     <style>
         h1 {
@@ -88,7 +90,7 @@
 	-webkit-align-content:space-around;
 	align-content:space-around;
 }
-		#bcomutare, #brecord {
+		#bcomutare, #brecord, #selimgs {
 		font-size: 20px;
 		margin: 5px;
 		padding: 5px;
@@ -104,6 +106,35 @@
 
 <body>
 
+
+	<div id="centrat" class="colv"> 
+	
+	<br>
+		
+		<div class="dropdown colv_el"> 
+			<button id="selimgs" class="dropbtn">Select Backgrounds:  </button> 
+			
+			<br>
+			
+			<div class="dropdown-content colv_el"> 
+				<div><img  onclick="selimg(this)" src= "bg/pixabay_hills.jpg" width="64" height="48">  Hills</div> 
+				<div><img  onclick="selimg(this)" src= "bg/pixabay_fall.jpg" width="64" height="48">  Fall</div> 
+				<div><img onclick="selimg(this)" src= "bg/pixabay_landscape.jpg" width="64" height="48">  Landscape</div> 
+				<div><img onclick="selimg(this)" src= "bg/pixabay_road.jpg" width="64" height="48">  Road</div> 
+				<div><img onclick="selimg(this)" src= "bg/pixabay_forest.jpg" width="64" height="48">  Forest</div> 
+			</div> 
+		</div> 
+	</div> 
+	
+	
+ 	<script>
+	function selimg(image) {
+	document.getElementById('bg').src = image.src;
+	}
+	</script>
+
+
+
 <div id ="container" class="flex-container">
 
      <video id="camera" width="640" height="480" style="display: none"></video>
@@ -117,10 +148,10 @@
 	<hr>
 	
     <canvas id="canvas" class="flex-item"></canvas>
-	     <img  id="bg" src="bg/pixabay_hills.jpg" width="640" height="480" style="display: none">
+	     <img  id="bg" src="bg/pixabay_hills.jpg" style="display: none">
 		 
 	</div>
-
+	
      <script> 	 
 	 
         let localStream = null;
@@ -140,7 +171,7 @@
 
         async function getImages() {
             const img = await document.getElementById('camera');
-            const bg = document.getElementById('bg')
+            const bg = document.getElementById('bg');
             const cv_img = document.createElement('canvas');
             const cv_bg = document.createElement('canvas');
             cv_img.width = img.width;
@@ -225,7 +256,7 @@
         }
 
         async function startVideo() {
-            const mediaConst = { video: { width: 640, height: 480}, audio: false };
+            const mediaConst = { video: { width: 640, height: 480, frameRate: 25}, audio: false };
             localStream = await navigator.mediaDevices.getUserMedia(mediaConst).catch(err => {
                 console.error('media error:', err);
                 return;
@@ -290,10 +321,12 @@ function exportVid(blob) {
 				document.getElementById('bcomutare').innerHTML = "Stop Video";
 				startVideoAnimation();
 				document.getElementById('brecord').disabled = false;
+				document.getElementById('selimgs').style.visibility = "hidden";
 				} else {
 			stopVideo();
 			document.getElementById('bcomutare').innerHTML = "Start Video";
 			document.getElementById('brecord').disabled = true;
+			document.getElementById('selimgs').style.visibility = "initial";
 		}	
 		}
 </script>
