@@ -65,3 +65,22 @@ Useful information I found on MDN web docs:
 
 https://developer.mozilla.org/en-US/docs/Web/API/MediaStream_Recording_API
 
+What driver do you use for your intel gpu?
+
+You can force hardware acceleration in **Firefox** - WebRenderer in **about:config** by setting:
+
+  `gfx.webrender.all - true`
+  
+  `gfx.webrender.enabled - true`
+  
+--> restart browser and
+
+  `layers.acceleration.force-enabled - true`
+  
+--> restart browser
+
+Then check in **about:support** that you have instead Compositing: Basic, Compositing: WebRenderer and also WebGL 2 support.
+
+Note: depending of your driver/gpu you may not have WebGL 2 support.
+
+**If you do not have WebGL enabled the application will run very slowly!**
